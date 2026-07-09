@@ -8,7 +8,7 @@ export default function Home() {
       </Head>
       <header className="flex flex-col items-center justify-center mb-2 pt-2">
         <img src="/logo.png" alt="Ibrahim Delivers BN Logo" className="h-60 w-auto mb-2" />
-        <h1 className="text-3xl font-bold">Welcome to my app!</h1>
+        <h1 className="text-3xl font-bold">Welcome to Ibrahim's Market</h1>
       </header>
       <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
         {sampleProducts.map((product, index) => (
