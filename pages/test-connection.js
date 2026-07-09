@@ -7,7 +7,7 @@ export default function TestConnection() {
 
   useEffect(() => {
     async function fetchData() {
-      const { data, error } = await supabase.from('test_connection').select('*')
+      const { data, error } = await supabase.from('test.connection').select('*')
       if (error) setError(error.message)
       else setData(data)
     }
