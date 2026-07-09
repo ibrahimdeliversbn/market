@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from './test-connection'
+import { supabase } from '../lib/supabaseClient'
 
 export default function TestConnection() {
   const [data, setData] = useState(null)
