@@ -70,8 +70,26 @@ export default function BasketDrawer() {
                               <p className="mt-1 text-sm text-gray-500">${item.price.toFixed(2)} each</p>
                             </div>
                             <div className="flex flex-1 items-end justify-between text-sm">
-                              <p className="text-gray-500">Qty {item.quantity}</p>
-                              {/* Keep controls simple for now as requested for Task 1 */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500">Qty</span>
+                                <div className="flex items-center border border-gray-200 rounded-md overflow-hidden bg-white">
+                                  <button
+                                    onClick={() => updateQuantity(item.id, -1)}
+                                    className="px-3 py-1 font-semibold text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition duration-150 bg-gray-50"
+                                    type="button"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="px-3 text-gray-800 font-semibold">{item.quantity}</span>
+                                  <button
+                                    onClick={() => updateQuantity(item.id, 1)}
+                                    className="px-3 py-1 font-semibold text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition duration-150 bg-gray-50"
+                                    type="button"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </li>
