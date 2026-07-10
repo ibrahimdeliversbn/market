@@ -21,7 +21,7 @@ export default function Home() {
       </Head>
       <header className="flex flex-col items-center justify-center mb-2 pt-2">
         <img src="/logo.png" alt="Ibrahim Delivers BN Logo" className="h-60 w-auto mb-2" />
-        <h1 className="text-3xl font-bold text-gray-800">Welcome to Ibrahim's Market</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center px-4 break-words">Welcome to Ibrahim's Market</h1>
         <button
           onClick={openBasket}
           className="mt-4 text-lg font-semibold bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md border border-gray-200 hover:bg-gray-50 transition duration-200 cursor-pointer flex items-center gap-2"
