@@ -1,12 +1,19 @@
 import { useBasket } from '../context/BasketContext';
 
 export default function BasketDrawer() {
-  const { basket, isOpen, closeBasket, isHydrated, removeFromBasket, updateQuantity } = useBasket();
+  const { basket, isOpen, closeBasket, isHydrated, removeFromBasket, updateQuantity, clearBasket } = useBasket();
 
   if (!isOpen) return null;
 
   // Calculate totals
   const subtotal = basket.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const handleCheckout = () => {
+    if (window.confirm("Order placed! Thank you for your purchase.")) {
+      clearBasket();
+      closeBasket();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
@@ -90,6 +97,16 @@ export default function BasketDrawer() {
                                   </button>
                                 </div>
                               </div>
+
+                              <div className="flex">
+                                <button
+                                  type="button"
+                                  onClick={() => removeFromBasket(item.id)}
+                                  className="font-medium text-red-600 hover:text-red-500 transition duration-150"
+                                >
+                                  Remove
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </li>
@@ -109,6 +126,7 @@ export default function BasketDrawer() {
                   <p className="mt-0.5 text-sm text-gray-500">Shipping and taxes calculated at checkout.</p>
                   <div className="mt-6">
                     <button
+                      onClick={handleCheckout}
                       className="flex items-center justify-center rounded-md border border-transparent bg-gray-800 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-gray-700 w-full transition duration-200"
                     >
                       Checkout
