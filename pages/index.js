@@ -54,11 +54,26 @@ export default function Home() {
 
   const totalItems = isHydrated ? basket.reduce((total, item) => total + item.quantity, 0) : 0;
 
+  // Known logical ordering for common size labels. Anything not in this list
+  // falls back to the end, sorted alphabetically among itself.
+  const SIZE_ORDER = ['XS', 'S', 'Small', 'M', 'Medium', 'L', 'Large', 'XL', '2XL', 'XXL', '3XL', 'XXXL', '4XL'];
+
+  const sortValues = (values) => {
+    return [...values].sort((a, b) => {
+      const aIndex = SIZE_ORDER.indexOf(a);
+      const bIndex = SIZE_ORDER.indexOf(b);
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      if (aIndex !== -1) return -1; // known sizes come before unknown values
+      if (bIndex !== -1) return 1;
+      return a.localeCompare(b); // fallback: alphabetical (e.g. colours)
+    });
+  };
+
   // Get distinct values for a given option slot (1 or 2) across a product's variants
   const getDistinctValues = (variants, slot) => {
     const key = slot === 1 ? 'option1_value' : 'option2_value';
     const values = variants.map((v) => v[key]).filter((v) => v !== null && v !== undefined);
-    return [...new Set(values)];
+    return sortValues([...new Set(values)]);
   };
 
   const handleSelectOption = (productId, slot, value) => {
