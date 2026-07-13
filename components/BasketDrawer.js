@@ -1,4 +1,5 @@
 import { useBasket } from '../context/BasketContext';
+import { formatCurrency } from '../lib/formatCurrency';
 
 export default function BasketDrawer() {
   const { basket, isOpen, closeBasket, isHydrated, removeFromBasket, updateQuantity, clearBasket } = useBasket();
@@ -72,9 +73,9 @@ export default function BasketDrawer() {
                             <div>
                               <div className="flex justify-between text-base font-medium text-gray-900">
                                 <h3>{item.name}</h3>
-                                <p className="ml-4">${(item.price * item.quantity).toFixed(2)}</p>
+                                <p className="ml-4">{formatCurrency(item.price * item.quantity)}</p>
                               </div>
-                              <p className="mt-1 text-sm text-gray-500">${item.price.toFixed(2)} each</p>
+                              <p className="mt-1 text-sm text-gray-500">{formatCurrency(item.price)} each</p>
                             </div>
                             <div className="flex flex-1 items-end justify-between text-sm">
                               <div className="flex items-center gap-2">
@@ -121,7 +122,7 @@ export default function BasketDrawer() {
                 <div className="border-t border-gray-200 py-6 px-4 sm:px-6 bg-gray-50">
                   <div className="flex justify-between text-base font-medium text-gray-900">
                     <p>Subtotal</p>
-                    <p>${subtotal.toFixed(2)}</p>
+                    <p>{formatCurrency(subtotal)}</p>
                   </div>
                   <p className="mt-0.5 text-sm text-gray-500">Shipping and taxes calculated at checkout.</p>
                   <div className="mt-6">

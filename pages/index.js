@@ -1,5 +1,6 @@
 import Head from 'next/head';
 import { useBasket } from '../context/BasketContext';
+import { formatCurrency } from '../lib/formatCurrency';
 import BasketDrawer from '../components/BasketDrawer';
 import { supabase } from '../lib/supabaseClient';
 import { useEffect, useState } from 'react';
@@ -67,7 +68,7 @@ export default function Home() {
                 />
               )}
               <h2 className="text-xl font-bold mb-2 text-gray-800">{product.name}</h2>
-              <p className="text-lg font-semibold text-gray-800 mb-4">${product.price.toFixed(2)}</p>
+               <p className="text-lg font-semibold text-gray-800 mb-4">{formatCurrency(product.price)}</p>
               <button
                 onClick={() => addToBasket(product)}
                 className="bg-gray-800 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
