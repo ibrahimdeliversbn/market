@@ -63,17 +63,31 @@ export default function Home() {
       const aIndex = SIZE_ORDER.indexOf(a);
       const bIndex = SIZE_ORDER.indexOf(b);
       if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-      if (aIndex !== -1) return -1; // known sizes come before unknown values
+      if (aIndex !== -1) return -1;
       if (bIndex !== -1) return 1;
-      return a.localeCompare(b); // fallback: alphabetical (e.g. colours)
+      const aNum = Number(a);
+      const bNum = Number(b);
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+      return a.localeCompare(b);
     });
   };
 
   // Get distinct values for a given option slot (1 or 2) across a product's variants
-  const getDistinctValues = (variants, slot) => {
+const getDistinctValues = (variants, slot) => {
     const key = slot === 1 ? 'option1_value' : 'option2_value';
-    const values = variants.map((v) => v[key]).filter((v) => v !== null && v !== undefined);
-    return sortValues([...new Set(values)]);
+    const values = [...new Set(variants.map((v) => v[key]).filter((v) => v !== null && v !== undefined))];
+
+    if (slot === 1) {
+      // Sort colours by sort_order (the order the shopkeeper entered them),
+      // not alphabetically.
+      return values.sort((a, b) => {
+        const aOrders = variants.filter((v) => v[key] === a).map((v) => v.sort_order ?? 999);
+        const bOrders = variants.filter((v) => v[key] === b).map((v) => v.sort_order ?? 999);
+        return Math.min(...aOrders) - Math.min(...bOrders);
+      });
+    }
+
+    return sortValues(values); // existing size-order logic, unchanged
   };
 
   const handleSelectOption = (productId, slot, value) => {
