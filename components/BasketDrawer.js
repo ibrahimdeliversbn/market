@@ -16,6 +16,15 @@ export default function BasketDrawer() {
     }
   };
 
+  // Format a selectedOptions object like { Colour: 'Blue', Size: 'Medium' }
+  // into a display string like "Colour: Blue, Size: Medium"
+  const formatSelectedOptions = (selectedOptions) => {
+    if (!selectedOptions) return null;
+    const entries = Object.entries(selectedOptions).filter(([, value]) => !!value);
+    if (entries.length === 0) return null;
+    return entries.map(([name, value]) => `${name}: ${value}`).join(', ');
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
       <div className="absolute inset-0 overflow-hidden">
@@ -67,51 +76,57 @@ export default function BasketDrawer() {
                 ) : (
                   <div className="flow-root">
                     <ul role="list" className="-my-6 divide-y divide-gray-200">
-                      {basket.map((item) => (
-                        <li key={item.id} className="flex py-6">
-                          <div className="flex flex-1 flex-col">
-                            <div>
-                              <div className="flex justify-between text-base font-medium text-gray-900">
-                                <h3>{item.name}</h3>
-                                <p className="ml-4">{formatCurrency(item.price * item.quantity)}</p>
+                      {basket.map((item) => {
+                        const optionsLabel = formatSelectedOptions(item.selectedOptions);
+                        return (
+                          <li key={item.id} className="flex py-6">
+                            <div className="flex flex-1 flex-col">
+                              <div>
+                                <div className="flex justify-between text-base font-medium text-gray-900">
+                                  <h3>{item.name}</h3>
+                                  <p className="ml-4">{formatCurrency(item.price * item.quantity)}</p>
+                                </div>
+                                {optionsLabel && (
+                                  <p className="mt-0.5 text-xs text-gray-500">{optionsLabel}</p>
+                                )}
+                                <p className="mt-1 text-sm text-gray-500">{formatCurrency(item.price)} each</p>
                               </div>
-                              <p className="mt-1 text-sm text-gray-500">{formatCurrency(item.price)} each</p>
-                            </div>
-                            <div className="flex flex-1 items-end justify-between text-sm">
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-500">Qty</span>
-                                <div className="flex items-center border border-gray-200 rounded-md overflow-hidden bg-white">
+                              <div className="flex flex-1 items-end justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-500">Qty</span>
+                                  <div className="flex items-center border border-gray-200 rounded-md overflow-hidden bg-white">
+                                    <button
+                                      onClick={() => updateQuantity(item.id, -1)}
+                                      className="px-3 py-1 font-semibold text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition duration-150 bg-gray-50"
+                                      type="button"
+                                    >
+                                      -
+                                    </button>
+                                    <span className="px-3 text-gray-800 font-semibold">{item.quantity}</span>
+                                    <button
+                                      onClick={() => updateQuantity(item.id, 1)}
+                                      className="px-3 py-1 font-semibold text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition duration-150 bg-gray-50"
+                                      type="button"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="flex">
                                   <button
-                                    onClick={() => updateQuantity(item.id, -1)}
-                                    className="px-3 py-1 font-semibold text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition duration-150 bg-gray-50"
                                     type="button"
+                                    onClick={() => removeFromBasket(item.id)}
+                                    className="font-medium text-red-600 hover:text-red-500 transition duration-150"
                                   >
-                                    -
-                                  </button>
-                                  <span className="px-3 text-gray-800 font-semibold">{item.quantity}</span>
-                                  <button
-                                    onClick={() => updateQuantity(item.id, 1)}
-                                    className="px-3 py-1 font-semibold text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition duration-150 bg-gray-50"
-                                    type="button"
-                                  >
-                                    +
+                                    Remove
                                   </button>
                                 </div>
                               </div>
-
-                              <div className="flex">
-                                <button
-                                  type="button"
-                                  onClick={() => removeFromBasket(item.id)}
-                                  className="font-medium text-red-600 hover:text-red-500 transition duration-150"
-                                >
-                                  Remove
-                                </button>
-                              </div>
                             </div>
-                          </div>
-                        </li>
-                      ))}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 )}

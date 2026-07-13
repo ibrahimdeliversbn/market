@@ -12,27 +12,125 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Tracks selected option values per product: { [productId]: { option1: 'Blue', option2: 'Medium' } }
+  const [selectedOptions, setSelectedOptions] = useState({});
+
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchProductsAndVariants = async () => {
       try {
-        const { data, error: supabaseError } = await supabase
+        const { data: productsData, error: productsError } = await supabase
           .from('products')
           .select('*')
           .order('id', { ascending: true });
-        if (supabaseError) throw supabaseError;
-        setProducts(data || []);
+        if (productsError) throw productsError;
+
+        const { data: variantsData, error: variantsError } = await supabase
+          .from('product_variants')
+          .select('*')
+          .order('id', { ascending: true });
+        if (variantsError) throw variantsError;
+
+        const variantsByProduct = variantsData.reduce((acc, variant) => {
+          const pid = variant.product_id;
+          if (!acc[pid]) acc[pid] = [];
+          acc[pid].push(variant);
+          return acc;
+        }, {});
+
+        const enriched = productsData.map((p) => ({
+          ...p,
+          variants: variantsByProduct[p.id] || [],
+        }));
+        setProducts(enriched || []);
       } catch (err) {
-        console.error('Error fetching products:', err);
+        console.error('Error fetching products or variants:', err);
         setError(err);
       } finally {
         setLoading(false);
       }
     };
-    fetchProducts();
+    fetchProductsAndVariants();
   }, []);
 
-  // Calculate total number of items in the basket (sum of quantities)
   const totalItems = isHydrated ? basket.reduce((total, item) => total + item.quantity, 0) : 0;
+
+  // Get distinct values for a given option slot (1 or 2) across a product's variants
+  const getDistinctValues = (variants, slot) => {
+    const key = slot === 1 ? 'option1_value' : 'option2_value';
+    const values = variants.map((v) => v[key]).filter((v) => v !== null && v !== undefined);
+    return [...new Set(values)];
+  };
+
+  const handleSelectOption = (productId, slot, value) => {
+    setSelectedOptions((prev) => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        [slot === 1 ? 'option1' : 'option2']: value,
+      },
+    }));
+  };
+
+  // Find the matching variant row for a product given the currently selected options
+  const findMatchingVariant = (product) => {
+    const selection = selectedOptions[product.id] || {};
+    return product.variants.find((v) => {
+      const option1Matches = !product.option1_name || v.option1_value === selection.option1;
+      const option2Matches = !product.option2_name || v.option2_value === selection.option2;
+      return option1Matches && option2Matches;
+    });
+  };
+
+  // Whether all required options have been selected for a product
+  const isSelectionComplete = (product) => {
+    if (!product.option1_name && !product.option2_name) return true; // no variants needed
+    const selection = selectedOptions[product.id] || {};
+    const option1Ok = !product.option1_name || !!selection.option1;
+    const option2Ok = !product.option2_name || !!selection.option2;
+    return option1Ok && option2Ok;
+  };
+
+  // Whether a specific option button should be disabled because that value has
+  // no available variant given the current selection state
+  const isOptionValueUnavailable = (product, slot, value) => {
+    const selection = selectedOptions[product.id] || {};
+    const candidateVariants = product.variants.filter((v) => {
+      if (slot === 1) {
+        const otherMatches = !product.option2_name || v.option2_value === selection.option2 || !selection.option2;
+        return v.option1_value === value && otherMatches;
+      } else {
+        const otherMatches = !product.option1_name || v.option1_value === selection.option1 || !selection.option1;
+        return v.option2_value === value && otherMatches;
+      }
+    });
+    if (candidateVariants.length === 0) return false; // no data either way, don't block
+    return candidateVariants.every((v) => v.is_available === false);
+  };
+
+  const handleAddToBasket = (product) => {
+    const hasVariants = !!(product.option1_name || product.option2_name);
+
+    if (!hasVariants) {
+      addToBasket(product);
+      return;
+    }
+
+    const variant = findMatchingVariant(product);
+    if (!variant) return; // shouldn't happen if button is properly disabled
+
+    const selection = selectedOptions[product.id] || {};
+
+    addToBasket({
+      ...product,
+      id: variant.id, // distinct basket line per variant
+      price: variant.price ?? product.price,
+      image_url: variant.image_url ?? product.image_url,
+      selectedOptions: {
+        ...(product.option1_name ? { [product.option1_name]: selection.option1 } : {}),
+        ...(product.option2_name ? { [product.option2_name]: selection.option2 } : {}),
+      },
+    });
+  };
 
   return (
     <>
@@ -52,10 +150,15 @@ export default function Home() {
           <span>Basket: {totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
         </button>
       </header>
-        <main className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-          {loading && <p className="col-span-full text-center">Loading products...</p>}
-          {error && <p className="col-span-full text-center text-red-600">Error loading products.</p>}
-          {!loading && !error && products.map((product) => (
+      <main className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+        {loading && <p className="col-span-full text-center">Loading products...</p>}
+        {error && <p className="col-span-full text-center text-red-600">Error loading products.</p>}
+        {!loading && !error && products.map((product) => {
+          const hasVariants = !!(product.option1_name || product.option2_name);
+          const selection = selectedOptions[product.id] || {};
+          const canAdd = isSelectionComplete(product);
+
+          return (
             <div
               key={product.id}
               className="bg-white rounded-lg shadow-md m-2 p-6 max-w-sm w-full border border-gray-200 text-center"
@@ -68,16 +171,81 @@ export default function Home() {
                 />
               )}
               <h2 className="text-xl font-bold mb-2 text-gray-800">{product.name}</h2>
-               <p className="text-lg font-semibold text-gray-800 mb-4">{formatCurrency(product.price)}</p>
+              <p className="text-lg font-semibold text-gray-800 mb-4">{formatCurrency(product.price)}</p>
+
+              {hasVariants && product.option1_name && (
+                <div className="mb-3 text-left">
+                  <p className="text-xs font-medium text-gray-500 mb-1">{product.option1_name}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {getDistinctValues(product.variants, 1).map((value) => {
+                      const isSelected = selection.option1 === value;
+                      const isUnavailable = isOptionValueUnavailable(product, 1, value);
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          disabled={isUnavailable}
+                          onClick={() => handleSelectOption(product.id, 1, value)}
+                          className={`px-3 py-1 text-sm rounded-md border transition duration-150 ${
+                            isUnavailable
+                              ? 'border-gray-200 text-gray-300 line-through cursor-not-allowed'
+                              : isSelected
+                              ? 'bg-gray-800 text-white border-gray-800'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
+                          }`}
+                        >
+                          {value}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {hasVariants && product.option2_name && (
+                <div className="mb-3 text-left">
+                  <p className="text-xs font-medium text-gray-500 mb-1">{product.option2_name}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {getDistinctValues(product.variants, 2).map((value) => {
+                      const isSelected = selection.option2 === value;
+                      const isUnavailable = isOptionValueUnavailable(product, 2, value);
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          disabled={isUnavailable}
+                          onClick={() => handleSelectOption(product.id, 2, value)}
+                          className={`px-3 py-1 text-sm rounded-md border transition duration-150 ${
+                            isUnavailable
+                              ? 'border-gray-200 text-gray-300 line-through cursor-not-allowed'
+                              : isSelected
+                              ? 'bg-gray-800 text-white border-gray-800'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
+                          }`}
+                        >
+                          {value}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <button
-                onClick={() => addToBasket(product)}
-                className="bg-gray-800 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                onClick={() => handleAddToBasket(product)}
+                disabled={hasVariants && !canAdd}
+                className={`font-semibold py-2 px-4 rounded-lg transition duration-200 ${
+                  hasVariants && !canAdd
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-800 hover:bg-gray-700 text-white'
+                }`}
               >
-                Add to Basket
+                {hasVariants && !canAdd ? 'Select options' : 'Add to Basket'}
               </button>
             </div>
-          ))}
-        </main>
+          );
+        })}
+      </main>
       <BasketDrawer />
     </>
   );
