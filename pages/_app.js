@@ -1,11 +1,13 @@
 import '../src/styles.css'
-import { BasketProvider } from '../context/BasketContext'
+import { CartProvider } from '../context/CartContext'
+import BasketDrawer from '../components/BasketDrawer'
 
 function MyApp({ Component, pageProps }) {
   return (
-    <BasketProvider>
+    <CartProvider>
       <Component {...pageProps} />
-    </BasketProvider>
+      <BasketDrawer />
+    </CartProvider>
   )
 }
 

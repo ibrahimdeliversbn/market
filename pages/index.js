@@ -1,18 +1,16 @@
 import Head from 'next/head';
-import { useBasket } from '../context/BasketContext';
+import { useCart } from '../context/CartContext';
 import { formatCurrency } from '../lib/formatCurrency';
-import BasketDrawer from '../components/BasketDrawer';
 import { supabase } from '../lib/supabaseClient';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
-  const { basket, addToBasket, openBasket, isHydrated } = useBasket();
+  const { cart, addItem, openCart, isHydrated } = useCart();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Tracks selected option values per product: { [productId]: { option1: 'Blue', option2: 'Medium' } }
   const [selectedOptions, setSelectedOptions] = useState({});
 
   useEffect(() => {
@@ -52,10 +50,8 @@ export default function Home() {
     fetchProductsAndVariants();
   }, []);
 
-  const totalItems = isHydrated ? basket.reduce((total, item) => total + item.quantity, 0) : 0;
+  const totalItems = isHydrated ? cart.reduce((total, item) => total + item.quantity, 0) : 0;
 
-  // Known logical ordering for common size labels. Anything not in this list
-  // falls back to the end, sorted alphabetically among itself.
   const SIZE_ORDER = ['XS', 'S', 'Small', 'M', 'Medium', 'L', 'Large', 'XL', '2XL', 'XXL', '3XL', 'XXXL', '4XL'];
 
   const sortValues = (values) => {
@@ -72,14 +68,11 @@ export default function Home() {
     });
   };
 
-  // Get distinct values for a given option slot (1 or 2) across a product's variants
-const getDistinctValues = (variants, slot) => {
+  const getDistinctValues = (variants, slot) => {
     const key = slot === 1 ? 'option1_value' : 'option2_value';
     const values = [...new Set(variants.map((v) => v[key]).filter((v) => v !== null && v !== undefined))];
 
     if (slot === 1) {
-      // Sort colours by sort_order (the order the shopkeeper entered them),
-      // not alphabetically.
       return values.sort((a, b) => {
         const aOrders = variants.filter((v) => v[key] === a).map((v) => v.sort_order ?? 999);
         const bOrders = variants.filter((v) => v[key] === b).map((v) => v.sort_order ?? 999);
@@ -87,7 +80,7 @@ const getDistinctValues = (variants, slot) => {
       });
     }
 
-    return sortValues(values); // existing size-order logic, unchanged
+    return sortValues(values);
   };
 
   const handleSelectOption = (productId, slot, value) => {
@@ -100,7 +93,6 @@ const getDistinctValues = (variants, slot) => {
     }));
   };
 
-  // Find the matching variant row for a product given the currently selected options
   const findMatchingVariant = (product) => {
     const selection = selectedOptions[product.id] || {};
     return product.variants.find((v) => {
@@ -110,17 +102,14 @@ const getDistinctValues = (variants, slot) => {
     });
   };
 
-  // Whether all required options have been selected for a product
   const isSelectionComplete = (product) => {
-    if (!product.option1_name && !product.option2_name) return true; // no variants needed
+    if (!product.option1_name && !product.option2_name) return true;
     const selection = selectedOptions[product.id] || {};
     const option1Ok = !product.option1_name || !!selection.option1;
     const option2Ok = !product.option2_name || !!selection.option2;
     return option1Ok && option2Ok;
   };
 
-  // Whether a specific option button should be disabled because that value has
-  // no available variant given the current selection state
   const isOptionValueUnavailable = (product, slot, value) => {
     const selection = selectedOptions[product.id] || {};
     const candidateVariants = product.variants.filter((v) => {
@@ -132,7 +121,7 @@ const getDistinctValues = (variants, slot) => {
         return v.option2_value === value && otherMatches;
       }
     });
-    if (candidateVariants.length === 0) return false; // no data either way, don't block
+    if (candidateVariants.length === 0) return false;
     return candidateVariants.every((v) => v.is_available === false);
   };
 
@@ -140,25 +129,14 @@ const getDistinctValues = (variants, slot) => {
     const hasVariants = !!(product.option1_name || product.option2_name);
 
     if (!hasVariants) {
-      addToBasket(product);
+      addItem(product, null, 1);
       return;
     }
 
     const variant = findMatchingVariant(product);
-    if (!variant) return; // shouldn't happen if button is properly disabled
+    if (!variant) return;
 
-    const selection = selectedOptions[product.id] || {};
-
-    addToBasket({
-      ...product,
-      id: variant.id, // distinct basket line per variant
-      price: variant.price ?? product.price,
-      image_url: variant.image_url ?? product.image_url,
-      selectedOptions: {
-        ...(product.option1_name ? { [product.option1_name]: selection.option1 } : {}),
-        ...(product.option2_name ? { [product.option2_name]: selection.option2 } : {}),
-      },
-    });
+    addItem(product, variant, 1);
   };
 
   return (
@@ -169,14 +147,14 @@ const getDistinctValues = (variants, slot) => {
       <header className="flex flex-col items-center justify-center mb-2 pt-2">
         <img src="/logo.png" alt="Ibrahim Delivers BN Logo" className="h-60 w-auto mb-2" />
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center px-4 break-words">Welcome to Ibrahim's Market</h1>
-        <button
-          onClick={openBasket}
+          <button
+            onClick={openCart}
           className="mt-4 text-lg font-semibold bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md border border-gray-200 hover:bg-gray-50 transition duration-200 cursor-pointer flex items-center gap-2"
         >
           <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
           </svg>
-          <span>Basket: {totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
+            <span>Basket: {totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
         </button>
       </header>
       <main className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
@@ -275,7 +253,6 @@ const getDistinctValues = (variants, slot) => {
           );
         })}
       </main>
-      <BasketDrawer />
     </>
   );
 }
